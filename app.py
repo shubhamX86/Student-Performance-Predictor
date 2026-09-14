@@ -5,11 +5,14 @@ import pickle
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
 # ==========================================
-# PAGE CONFIGURATION
+# PAGE
 # ==========================================
 
 st.set_page_config(
@@ -20,22 +23,14 @@ st.set_page_config(
 
 
 # ==========================================
-# LOAD DATASET
+# LOAD DATA
 # ==========================================
 
 data = pd.read_csv("students.csv")
 
 
 # ==========================================
-# LOAD TRAINED MODEL
-# ==========================================
-
-with open("student_model.pkl", "rb") as file:
-    model = pickle.load(file)
-
-
-# ==========================================
-# TRAIN/TEST DATA FOR MODEL EVALUATION
+# FEATURES
 # ==========================================
 
 features = [
@@ -49,6 +44,11 @@ features = [
 X = data[features]
 y = data["final_score"]
 
+
+# ==========================================
+# TRAIN TEST SPLIT
+# ==========================================
+
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -56,10 +56,66 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42
 )
 
-predictions = model.predict(X_test)
 
-mae = mean_absolute_error(y_test, predictions)
-r2 = r2_score(y_test, predictions)
+# ==========================================
+# LOAD BEST MODEL
+# ==========================================
+
+with open("student_model.pkl", "rb") as file:
+    best_model = pickle.load(file)
+
+
+# ==========================================
+# MODEL COMPARISON
+# ==========================================
+
+models = {
+
+    "Linear Regression":
+        LinearRegression(),
+
+    "Decision Tree":
+        DecisionTreeRegressor(random_state=42),
+
+    "Random Forest":
+        RandomForestRegressor(
+            n_estimators=100,
+            random_state=42
+        ),
+
+    "Gradient Boosting":
+        GradientBoostingRegressor(
+            random_state=42
+        )
+}
+
+
+results = []
+
+for name, model in models.items():
+
+    model.fit(X_train, y_train)
+
+    prediction = model.predict(X_test)
+
+    mae = mean_absolute_error(
+        y_test,
+        prediction
+    )
+
+    r2 = r2_score(
+        y_test,
+        prediction
+    )
+
+    results.append({
+        "Model": name,
+        "MAE": round(mae, 2),
+        "R² Score": round(r2, 2)
+    })
+
+
+results_df = pd.DataFrame(results)
 
 
 # ==========================================
@@ -77,36 +133,36 @@ st.write(
 # MODEL PERFORMANCE
 # ==========================================
 
-st.subheader("🤖 Model Performance")
+st.header("🤖 Model Comparison")
 
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric(
-        "MAE",
-        f"{mae:.2f}"
-    )
-
-with col2:
-    st.metric(
-        "R² Score",
-        f"{r2:.2f}"
-    )
-
-with col3:
-    st.metric(
-        "Students in Dataset",
-        len(data)
-    )
+st.dataframe(
+    results_df,
+    use_container_width=True
+)
 
 
 # ==========================================
-# STUDENT INPUT
+# BEST MODEL
 # ==========================================
 
-st.subheader("📝 Enter Student Information")
+best_row = results_df.loc[
+    results_df["MAE"].idxmin()
+]
+
+st.success(
+    f"🏆 Best Model: {best_row['Model']} "
+    f"| MAE: {best_row['MAE']}"
+)
+
+
+# ==========================================
+# INPUT
+# ==========================================
+
+st.header("📝 Enter Student Information")
 
 col1, col2 = st.columns(2)
+
 
 with col1:
 
@@ -166,19 +222,24 @@ if st.button("🔮 Predict Performance"):
         columns=features
     )
 
-    prediction = model.predict(input_data)[0]
+    prediction = best_model.predict(
+        input_data
+    )[0]
 
-    prediction = max(0, min(100, prediction))
+    prediction = max(
+        0,
+        min(100, prediction)
+    )
 
 
-    st.subheader("📊 Prediction Result")
+    st.header("📊 Prediction Result")
 
     st.success(
         f"Predicted Final Score: {prediction:.2f}"
     )
 
 
-    # Performance category
+    # Performance
 
     if prediction >= 80:
 
@@ -202,14 +263,12 @@ if st.button("🔮 Predict Performance"):
     )
 
 
-    # ======================================
-    # STUDENT RISK ANALYSIS
-    # ======================================
+    # Risk
 
     if prediction < 40:
 
         st.error(
-            "⚠️ This student may be at risk of failing."
+            "⚠️ Student is at high risk."
         )
 
     elif prediction < 60:
@@ -226,17 +285,15 @@ if st.button("🔮 Predict Performance"):
 
 
 # ==========================================
-# DATASET ANALYSIS
+# GRAPHS
 # ==========================================
 
 st.divider()
 
-st.header("📈 Student Dataset Analysis")
+st.header("📈 Student Data Analysis")
 
 
-# ==========================================
-# GRAPH 1 - STUDY HOURS VS FINAL SCORE
-# ==========================================
+# Study Hours
 
 st.subheader("Study Hours vs Final Score")
 
@@ -254,9 +311,7 @@ ax1.set_title("Study Hours vs Final Score")
 st.pyplot(fig1)
 
 
-# ==========================================
-# GRAPH 2 - ATTENDANCE VS FINAL SCORE
-# ==========================================
+# Attendance
 
 st.subheader("Attendance vs Final Score")
 
@@ -274,9 +329,7 @@ ax2.set_title("Attendance vs Final Score")
 st.pyplot(fig2)
 
 
-# ==========================================
-# GRAPH 3 - PREVIOUS SCORE VS FINAL SCORE
-# ==========================================
+# Previous Score
 
 st.subheader("Previous Score vs Final Score")
 
@@ -295,10 +348,10 @@ st.pyplot(fig3)
 
 
 # ==========================================
-# DATASET TABLE
+# DATASET
 # ==========================================
 
-st.subheader("📋 Student Dataset")
+st.header("📋 Student Dataset")
 
 st.dataframe(
     data,
