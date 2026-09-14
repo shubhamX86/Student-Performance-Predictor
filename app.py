@@ -357,3 +357,66 @@ st.dataframe(
     data,
     use_container_width=True
 )
+
+# ==========================================
+# FEATURE IMPORTANCE / COEFFICIENT ANALYSIS
+# ==========================================
+
+st.divider()
+
+st.header("🔍 What Affects Student Performance?")
+
+
+# Linear Regression coefficients
+if isinstance(best_model, LinearRegression):
+
+    importance = pd.DataFrame({
+        "Feature": features,
+        "Impact": best_model.coef_
+    })
+
+    # Absolute impact for ranking
+    importance["Absolute Impact"] = (
+        importance["Impact"].abs()
+    )
+
+    importance = importance.sort_values(
+        "Absolute Impact",
+        ascending=False
+    )
+
+
+    st.subheader("📊 Feature Impact")
+
+    st.dataframe(
+        importance[
+            ["Feature", "Impact"]
+        ],
+        use_container_width=True
+    )
+
+
+    # Bar chart
+    fig4, ax4 = plt.subplots()
+
+    ax4.bar(
+        importance["Feature"],
+        importance["Impact"]
+    )
+
+    ax4.set_xlabel("Features")
+    ax4.set_ylabel("Impact")
+    ax4.set_title(
+        "Feature Impact on Final Score"
+    )
+
+    plt.xticks(rotation=30)
+
+    st.pyplot(fig4)
+
+else:
+
+    st.info(
+        "Feature coefficient analysis is available "
+        "when Linear Regression is selected."
+    )
